@@ -47,6 +47,11 @@ irá ler parametros de um arquivo `application.properties` e persistir direto na
 ```shell
  bash insert-properties-to-parameter-store.sh
 ```
+
+E para ver de forma visual na conta AWS veja o recurso em ***conta aws -> SSM -> Parameter Store***:
+
+![image](./doc/image004.png)
+
 ## 2. Deletar Parametros
 
 ### Remover properties no Parameter Store LocalStack
