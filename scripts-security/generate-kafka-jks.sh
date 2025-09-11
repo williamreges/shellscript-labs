@@ -47,8 +47,8 @@ keytool -genkeypair \
   -keysize 2048 \
   -validity 365 \
   -keystore "$BROKER_KEYSTORE" \
-  -dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
   -storepass "$BROKER_KEYSTORE_PASS" \
+  -dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
   -keypass "$BROKER_KEY_PASS"
 
 echo "Exportando certificado do broker..."
@@ -67,8 +67,8 @@ keytool -genkeypair \
   -keysize 2048 \
   -validity 365 \
   -keystore "$CLIENT_KEYSTORE" \
-  -dname "CN=$CLIENT_NAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
   -storepass "$CLIENT_KEYSTORE_PASS" \
+  -dname "CN=$CLIENT_NAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
   -keypass "$CLIENT_KEY_PASS"
 
 echo "Exportando certificado do cliente..."

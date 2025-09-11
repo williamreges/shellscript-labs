@@ -31,7 +31,9 @@ mkdir -p "$SECRETS_DIR"
 echo "=== Script para gerar keystores e truststores para Kafka Broker e Cliente ==="
 ````
 
-### 1.1. Entrada de dados para broker
+## 🔐 Keystore do broker
+
+### Entrada de dados para broker
 
 ```bash
 read -p "Digite o hostname do broker (ex: broker): " BROKER_HOSTNAME
@@ -44,7 +46,41 @@ read -s -p "Digite a senha para o truststore do broker: " BROKER_TRUSTSTORE_PASS
 echo
 ```
 
-### 1.2 Entrada de dados para cliente
+### Arquivos do broker
+
+```bash
+BROKER_KEYSTORE="$SECRETS_DIR/kafka.server.keystore.jks"
+BROKER_TRUSTSTORE="$SECRETS_DIR/kafka.server.truststore.jks"
+BROKER_CERT="$SECRETS_DIR/kafka-server.crt"
+```
+
+### Gerando keystore do broker com chave privada e certificado autoassinado
+```bash
+keytool -genkeypair \
+-alias kafka-server \
+-keyalg RSA \
+-keysize 2048 \
+-validity 365 \
+-keystore "$BROKER_KEYSTORE" \
+-storepass "$BROKER_KEYSTORE_PASS" \
+-dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
+-keypass "$BROKER_KEY_PASS"
+```
+
+### Exportando certificado do broker
+```bash
+keytool -export \
+-alias kafka-server \
+-file "$BROKER_CERT" \
+-keystore "$BROKER_KEYSTORE" \
+-storepass "$BROKER_KEYSTORE_PASS"
+```
+
+## 🔐 Keystore do cliente
+
+
+
+### Entrada de dados para cliente
 
 ```bash
 read -p "Digite o nome do cliente (ex: kafka-client): " CLIENT_NAME
@@ -56,16 +92,7 @@ echo
 read -s -p "Digite a senha para o truststore do cliente: " CLIENT_TRUSTSTORE_PASS
 echo
 ```
-
-### 1.3 Arquivos do broker
-
-```bash
-BROKER_KEYSTORE="$SECRETS_DIR/kafka.server.keystore.jks"
-BROKER_TRUSTSTORE="$SECRETS_DIR/kafka.server.truststore.jks"
-BROKER_CERT="$SECRETS_DIR/kafka-server.crt"
-```
-
-### 1.4 Arquivos do cliente
+### Arquivos do cliente
 
 ```bash
 CLIENT_KEYSTORE="$SECRETS_DIR/$CLIENT_NAME.keystore.jks"
@@ -73,29 +100,7 @@ CLIENT_TRUSTSTORE="$SECRETS_DIR/$CLIENT_NAME.truststore.jks"
 CLIENT_CERT="$SECRETS_DIR/$CLIENT_NAME.crt"
 ```
 
-### 1.5 Gerando keystore do broker com chave privada e certificado autoassinado
-```bash
-keytool -genkeypair \
--alias kafka-server \
--keyalg RSA \
--keysize 2048 \
--validity 365 \
--keystore "$BROKER_KEYSTORE" \
--dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
--storepass "$BROKER_KEYSTORE_PASS" \
--keypass "$BROKER_KEY_PASS"
-```
-
-### 1.5 Exportando certificado do broker
-```bash
-keytool -export \
--alias kafka-server \
--file "$BROKER_CERT" \
--keystore "$BROKER_KEYSTORE" \
--storepass "$BROKER_KEYSTORE_PASS"
-```
-
-### 1.6 Gerando keystore do cliente com chave privada e certificado autoassinado
+### Gerando keystore do cliente com chave privada e certificado autoassinado
 
 ```bash
 keytool -genkeypair \
@@ -104,12 +109,12 @@ keytool -genkeypair \
 -keysize 2048 \
 -validity 365 \
 -keystore "$CLIENT_KEYSTORE" \
--dname "CN=$CLIENT_NAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
 -storepass "$CLIENT_KEYSTORE_PASS" \
+-dname "CN=$CLIENT_NAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
 -keypass "$CLIENT_KEY_PASS"
 ```
 
-### 1.7 Exportando certificado do cliente
+### Exportando certificado do cliente
 ```bash
 keytool -export \
 -alias $CLIENT_NAME \
@@ -117,8 +122,9 @@ keytool -export \
 -keystore "$CLIENT_KEYSTORE" \
 -storepass "$CLIENT_KEYSTORE_PASS"
 ```
+## 🔐 Criando Truststores
 
-### 1.8 Criando truststore do broker e importando certificado do cliente
+###  Criando truststore do broker e importando certificado do cliente
 ```bash
 keytool -import \
 -alias $CLIENT_NAME \
@@ -128,7 +134,7 @@ keytool -import \
 -noprompt
 ```
 
-### 1.9 Criando truststore do cliente e importando certificado do broker
+###  Criando truststore do cliente e importando certificado do broker
 ```bash
 keytool -import \
 -alias kafka-server \
@@ -137,7 +143,9 @@ keytool -import \
 -storepass "$CLIENT_TRUSTSTORE_PASS" \
 -noprompt
 ```
-### 1.10 Informações de Variávies para colocar o Docker Compose
+
+## 🔐 Informações para setar variávies de ambiente Broker Docker 
+
 ```bash
 echo
 echo "Arquivos gerados em $SECRETS_DIR:"
@@ -162,8 +170,45 @@ echo
 echo "E para o cliente, configure o keystore e truststore correspondentes com as senhas usadas."
 ```
 
-## Como usar
-1. Salve o script acima como `generate-kafka-jks.sh`.
+Exemplo
+```docker-compose
+services:
+  broker:
+    image: confluentinc/cp-kafka:5.5.1
+    hostname: broker
+    container_name: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+      - "9093:9093"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_LISTENERS: SSL://0.0.0.0:9093
+      KAFKA_SSL_KEYSTORE_LOCATION: /etc/security/tls/kafka.server.keystore.jks
+      KAFKA_SSL_KEYSTORE_PASSWORD: <redacted>
+      KAFKA_SSL_KEY_PASSWORD: <redacted>
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/security/tls/kafka.server.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: <redacted>
+      KAFKA_SSL_CLIENT_AUTH: required
+    volumes:
+          - ./secrets:/etc/security/tls
+```
+
+---
+
+## 🔐 Como usar
+1. Salve o script como `generate-kafka-jks.sh`.
 2. Dê permissão de execução: `chmod +x generate-kafka-jks.sh`
 3. Execute o script:
    `./generate-kafka-jks.sh`
@@ -173,15 +218,7 @@ echo "E para o cliente, configure o keystore e truststore correspondentes com as
 7. Configure o cliente Kafka para usar seu keystore e truststore para autenticação SSL.
 
 
-```docker
-environment
-    KAFKA_SSL_KEYSTORE_LOCATION=/etc/security/tls/kafka.server.keystore.jks
-    KAFKA_SSL_KEYSTORE_PASSWORD=123456
-    KAFKA_SSL_KEY_PASSWORD=123456
-    KAFKA_SSL_TRUSTSTORE_LOCATION=/etc/security/tls/kafka.server.truststore.jks
-    KAFKA_SSL_TRUSTSTORE_PASSWORD=123456
-    KAFKA_SSL_CLIENT_AUTH=required
-```
+
 
 #  🔐 2. Configuração de Clientes KAFKA
 
@@ -202,11 +239,11 @@ Properties props = new Properties();
 props.put("bootstrap.servers", "broker:9093"); // Porta SSL do broker
 props.put("security.protocol", "SSL");
 // Configurações do keystore do cliente (contém chave privada e certificado)
-props.put("ssl.keystore.location", "/caminho/para/client.keystore.jks");
+props.put("ssl.keystore.location", "/caminho/para/kafka-client.keystore.jks");
 props.put("ssl.keystore.password", "senha_keystore_cliente");
 props.put("ssl.key.password", "senha_chave_privada_cliente");
 // Configurações do truststore do cliente (contém certificado do broker)
-props.put("ssl.truststore.location", "/caminho/para/client.truststore.jks");
+props.put("ssl.truststore.location", "/caminho/para/kafka-client.truststore.jks");
 props.put("ssl.truststore.password", "senha_truststore_cliente");
 // Outras configurações do consumidor ou produtor
 props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
@@ -223,10 +260,10 @@ ou `kafka-console-consumer.sh`):
 ```properties
 bootstrap.servers=broker:9093
 security.protocol=SSL
-ssl.keystore.location=/caminho/para/client.keystore.jks
+ssl.keystore.location=/caminho/para/kafka-client.keystore.jks
 ssl.keystore.password=senha_keystore_cliente
 ssl.key.password=senha_chave_privada_cliente
-ssl.truststore.location=/caminho/para/client.truststore.jks
+ssl.truststore.location=/caminho/para/kafka-client.truststore.jks
 ssl.truststore.password=senha_truststore_cliente
 
 ```
@@ -252,11 +289,17 @@ kafka-console-producer.sh --broker-list broker:9093 --topic seu-topico --produce
 ```properties
 bootstrap.servers=broker:9093
 security.protocol=SSL
-ssl.keystore.location=/home/usuario/secrets/client.keystore.jks
+ssl.keystore.location=/home/usuario/secrets/kafka-client.keystore.jks
 ssl.keystore.password=clientKeystorePass
 ssl.key.password=clientKeyPass
-ssl.truststore.location=/home/usuario/secrets/client.truststore.jks
+ssl.truststore.location=/home/usuario/secrets/kafka-client.truststore.jks
 ssl.truststore.password=clientTruststorePass
 
 ```
 ---
+
+## Referencias
+* [Security Compliance in Confluent Platform](https://docs.confluent.io/platform/current/security/compliance/overview.html)
+* [Use TLS Authentication in Confluent Platform](https://docs.confluent.io/platform/current/security/authentication/mutual-tls/overview.html)
+* [Secure Deployment for Kafka Streams in Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/security.html)
+* [Configure Confluent Platform Components to Communicate with MDS over TLS](https://docs.confluent.io/platform/current/kafka/configure-mds/mds-ssl-config-for-components.html)
