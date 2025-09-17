@@ -1,16 +1,42 @@
-#  🔐 Gerar Keystore e Truststore para Broker Kafka e Cliente para Docker Compose
+#  🔐 Script Gerador de Keystore e Truststore SSL para broker Kafka  e clientes Kafka
 
 Para gerar os arquivos .jks (Java KeyStore) necessários para a configuração do Kafka SSL no seu serviço, 
 você precisa criar um armazenamento de chaves e uma truststore para seu Docker Compose. Esses arquivos contêm a chave privada e o certificado do 
 servidor (keystore) e os certificados confiáveis (truststore), respectivamente.
 
-## Explicação rápida do que o script faz:
+## 📋 Pré Requisito
+
+Para nosso exemplo utilizamremos o Java 17
+* Faça o download do Java Temurin versão 17.0.15;
+* Imagem docker **kafka-cp versão 7.9.2** onde a imagem tem a mesma versão do Java Temurin 17.0.2.
+
+> **Por que essa abordagem funciona?**
+> 
+> O keystore é um arquivo binário com um formato que depende da versão Java.
+   Gerar o keystore com uma versão Java e usá-lo com uma versão Java muito diferente pode causar incompatibilidades.
+   Garantir que a versão Java local (para geração) e a versão Java do contêiner (para o tempo de execução) sejam compatíveis é a melhor prática.
+
+
+
+## 📋  Explicação rápida do que o script faz:
 - Gera um keystore e certificado autoassinado para o broker.
 - Gera um keystore e certificado autoassinado para o cliente.
 - Exporta os certificados públicos.
 - Importa o certificado do cliente no truststore do broker (para que o broker confie no cliente).
 - Importa o certificado do broker no truststore do cliente (para que o cliente confie no broker).
 - Assim, a autenticação mútua SSL pode funcionar corretamente.
+
+## 🔐 Como usar
+1. Salve o script como `generate-kafka-jks.sh`.
+2. Dê permissão de execução: `chmod +x generate-kafka-jks.sh`
+3. Execute o script:
+   `./generate-kafka-jks.sh`
+4. Informe os dados solicitados (hostnames, nomes e senhas).
+5. Os arquivos `.jks` e `.crt` serão gerados na pasta `./secrets`.
+6. Monte essa pasta no container Kafka conforme seu `docker-compose.yml`.
+7. Configure o cliente Kafka para usar seu keystore e truststore para autenticação SSL.
+
+
 ---
 
 ## 1. Explicação do Bash
@@ -36,22 +62,19 @@ echo "=== Script para gerar keystores e truststores para Kafka Broker e Cliente 
 ### Entrada de dados para broker
 
 ```bash
-read -p "Digite o hostname do broker (ex: broker): " BROKER_HOSTNAME
-BROKER_HOSTNAME=${BROKER_HOSTNAME:-broker}
-read -s -p "Digite a senha para o keystore do broker: " BROKER_KEYSTORE_PASS
-echo
-read -s -p "Digite a senha para a chave privada do broker: " BROKER_KEY_PASS
-echo
-read -s -p "Digite a senha para o truststore do broker: " BROKER_TRUSTSTORE_PASS
-echo
+read -p "Digite o hostname do broker (ex: kafka-server): " BROKER_HOSTNAME
 ```
 
 ### Arquivos do broker
 
 ```bash
-BROKER_KEYSTORE="$SECRETS_DIR/kafka.server.keystore.jks"
-BROKER_TRUSTSTORE="$SECRETS_DIR/kafka.server.truststore.jks"
-BROKER_CERT="$SECRETS_DIR/kafka-server.crt"
+BROKER_KEYSTORE="$SECRETS_DIR/$BROKER_HOSTNAME.keystore.jks"
+BROKER_TRUSTSTORE="$SECRETS_DIR/$BROKER_HOSTNAME.truststore.jks"
+BROKER_CERT="$SECRETS_DIR/$BROKER_HOSTNAME.crt"
+echo $BROKER_KEYSTORE_PASS > $SECRETS_DIR/kafka_server_keystore_credentials
+echo $BROKER_KEY_PASS > $SECRETS_DIR/kafka_server_sslkey_credentials
+echo $BROKER_TRUSTSTORE_PASS > $SECRETS_DIR/kafka_server_truststore_credentials
+
 ```
 
 ### Gerando keystore do broker com chave privada e certificado autoassinado
@@ -83,14 +106,7 @@ keytool -export \
 ### Entrada de dados para cliente
 
 ```bash
-read -p "Digite o nome do cliente (ex: kafka-client): " CLIENT_NAME
-CLIENT_NAME=${CLIENT_NAME:-kafka-client}
-read -s -p "Digite a senha para o keystore do cliente: " CLIENT_KEYSTORE_PASS
-echo
-read -s -p "Digite a senha para a chave privada do cliente: " CLIENT_KEY_PASS
-echo
-read -s -p "Digite a senha para o truststore do cliente: " CLIENT_TRUSTSTORE_PASS
-echo
+read -s -p "Digite a senha para o keystore do cliente, para a chave privada do cliente e para o truststore do cliente: " PASS_CLIENT
 ```
 ### Arquivos do cliente
 
@@ -98,6 +114,9 @@ echo
 CLIENT_KEYSTORE="$SECRETS_DIR/$CLIENT_NAME.keystore.jks"
 CLIENT_TRUSTSTORE="$SECRETS_DIR/$CLIENT_NAME.truststore.jks"
 CLIENT_CERT="$SECRETS_DIR/$CLIENT_NAME.crt"
+echo $CLIENT_KEYSTORE_PASS > $SECRETS_DIR/kafka_client_keystore_credentials
+echo $CLIENT_KEY_PASS > $SECRETS_DIR/kafka_client_sslkey_credentials
+echo $CLIENT_TRUSTSTORE_PASS > $SECRETS_DIR/kafka_client_truststore_credentials
 ```
 
 ### Gerando keystore do cliente com chave privada e certificado autoassinado
@@ -170,11 +189,25 @@ echo
 echo "E para o cliente, configure o keystore e truststore correspondentes com as senhas usadas."
 ```
 
-Exemplo
-```docker-compose
+## 🐋 Docker Compose
+
+Exemplo de como você pode configurar  o docker-compose com os seguintes apontamentos de variáveis que configura o SSL 
+já com a imagem **kafka-cp:7.9.2** compatível com **Java 17 Temurin**.
+
+```yaml
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.9.2
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
   broker:
-    image: confluentinc/cp-kafka:5.5.1
+    image: confluentinc/cp-kafka:7.9.2
     hostname: broker
     container_name: broker
     depends_on:
@@ -187,36 +220,31 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+
+      # Define listeners: PLAINTEXT and SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,SSL:SSL
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092,SSL://localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,SSL://0.0.0.0:9093
+
+      # SSL
+      KAFKA_SSL_CLIENT_AUTH: 'required'
+      KAFKA_SSL_KEYSTORE_FILENAME: 'kafka-server.keystore.jks'
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: 'kafka_server_keystore_credentials'
+      KAFKA_SSL_KEY_CREDENTIALS: 'kafka_server_sslkey_credentials'
+      KAFKA_SSL_TRUSTSTORE_FILENAME: 'kafka-server.truststore.jks'
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'kafka_server_truststore_credentials'
+
+      # Other configs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_JMX_PORT: 9101
-      KAFKA_LISTENERS: SSL://0.0.0.0:9093
-      KAFKA_SSL_KEYSTORE_LOCATION: /etc/security/tls/kafka.server.keystore.jks
-      KAFKA_SSL_KEYSTORE_PASSWORD: <redacted>
-      KAFKA_SSL_KEY_PASSWORD: <redacted>
-      KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/security/tls/kafka.server.truststore.jks
-      KAFKA_SSL_TRUSTSTORE_PASSWORD: <redacted>
-      KAFKA_SSL_CLIENT_AUTH: required
     volumes:
-          - ./secrets:/etc/security/tls
+      - ./secrets:/etc/kafka/secrets:ro
 ```
 
 ---
-
-## 🔐 Como usar
-1. Salve o script como `generate-kafka-jks.sh`.
-2. Dê permissão de execução: `chmod +x generate-kafka-jks.sh`
-3. Execute o script:
-   `./generate-kafka-jks.sh`
-4. Informe os dados solicitados (hostnames, nomes e senhas).
-5. Os arquivos `.jks` e `.crt` serão gerados na pasta `./secrets`.
-6. Monte essa pasta no container Kafka conforme seu `docker-compose.yml`.
-7. Configure o cliente Kafka para usar seu keystore e truststore para autenticação SSL.
-
 
 
 

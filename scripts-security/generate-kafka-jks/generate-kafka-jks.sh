@@ -8,36 +8,43 @@ mkdir -p "$SECRETS_DIR"
 echo "=== Script para gerar keystores e truststores para Kafka Broker e Cliente ==="
 
 # Entrada de dados para broker
-read -p "Digite o hostname do broker (ex: broker): " BROKER_HOSTNAME
-BROKER_HOSTNAME=${BROKER_HOSTNAME:-broker}
+read -p "Digite o hostname do broker (ex: kafka-server): " BROKER_HOSTNAME
+BROKER_HOSTNAME=${BROKER_HOSTNAME:-kafka-server}
 
-read -s -p "Digite a senha para o keystore do broker: " BROKER_KEYSTORE_PASS
-echo
-read -s -p "Digite a senha para a chave privada do broker: " BROKER_KEY_PASS
-echo
-read -s -p "Digite a senha para o truststore do broker: " BROKER_TRUSTSTORE_PASS
+read -s -p "Digite a senha para o keystore do broker, para a chave privada do broker e para o truststore do broker:" PASS_BROKER
+
+BROKER_KEYSTORE_PASS=$PASS_BROKER
+BROKER_KEY_PASS=$PASS_BROKER
+BROKER_TRUSTSTORE_PASS=$PASS_BROKER
+
 echo
 
 # Entrada de dados para cliente
 read -p "Digite o nome do cliente (ex: kafka-client): " CLIENT_NAME
 CLIENT_NAME=${CLIENT_NAME:-kafka-client}
 
-read -s -p "Digite a senha para o keystore do cliente: " CLIENT_KEYSTORE_PASS
-echo
-read -s -p "Digite a senha para a chave privada do cliente: " CLIENT_KEY_PASS
-echo
-read -s -p "Digite a senha para o truststore do cliente: " CLIENT_TRUSTSTORE_PASS
+read -s -p "Digite a senha para o keystore do cliente, para a chave privada do cliente e para o truststore do cliente: " PASS_CLIENT
 echo
 
+CLIENT_KEYSTORE_PASS=$PASS_CLIENT
+CLIENT_KEY_PASS=$PASS_CLIENT
+CLIENT_TRUSTSTORE_PASS=$PASS_CLIENT
+
 # Arquivos do broker
-BROKER_KEYSTORE="$SECRETS_DIR/kafka.server.keystore.jks"
-BROKER_TRUSTSTORE="$SECRETS_DIR/kafka.server.truststore.jks"
-BROKER_CERT="$SECRETS_DIR/kafka-server.crt"
+BROKER_KEYSTORE="$SECRETS_DIR/$BROKER_HOSTNAME.keystore.jks"
+BROKER_TRUSTSTORE="$SECRETS_DIR/$BROKER_HOSTNAME.truststore.jks"
+BROKER_CERT="$SECRETS_DIR/$BROKER_HOSTNAME.crt"
+echo $BROKER_KEYSTORE_PASS > $SECRETS_DIR/kafka_server_keystore_credentials
+echo $BROKER_KEY_PASS > $SECRETS_DIR/kafka_server_sslkey_credentials
+echo $BROKER_TRUSTSTORE_PASS > $SECRETS_DIR/kafka_server_truststore_credentials
 
 # Arquivos do cliente
 CLIENT_KEYSTORE="$SECRETS_DIR/$CLIENT_NAME.keystore.jks"
 CLIENT_TRUSTSTORE="$SECRETS_DIR/$CLIENT_NAME.truststore.jks"
 CLIENT_CERT="$SECRETS_DIR/$CLIENT_NAME.crt"
+echo $CLIENT_KEYSTORE_PASS > $SECRETS_DIR/kafka_client_keystore_credentials
+echo $CLIENT_KEY_PASS > $SECRETS_DIR/kafka_client_sslkey_credentials
+echo $CLIENT_TRUSTSTORE_PASS > $SECRETS_DIR/kafka_client_truststore_credentials
 
 echo "Gerando keystore do broker com chave privada e certificado autoassinado..."
 
@@ -48,7 +55,7 @@ keytool -genkeypair \
   -validity 365 \
   -keystore "$BROKER_KEYSTORE" \
   -storepass "$BROKER_KEYSTORE_PASS" \
-  -dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=SuaEmpresa, L=SuaCidade, ST=SeuEstado, C=SeuPais" \
+  -dname "CN=$BROKER_HOSTNAME, OU=Kafka, O=Consultor, L=Guaarulhos, ST=SP, C=Brasil" \
   -keypass "$BROKER_KEY_PASS"
 
 echo "Exportando certificado do broker..."
@@ -106,12 +113,11 @@ echo " - Keystore: $CLIENT_KEYSTORE"
 echo " - Truststore: $CLIENT_TRUSTSTORE"
 echo " - Certificado: $CLIENT_CERT"
 echo
-echo "Lembre-se de configurar as variáveis de ambiente no docker-compose para o broker:"
-echo "KAFKA_SSL_KEYSTORE_LOCATION=/etc/security/tls/kafka.server.keystore.jks"
-echo "KAFKA_SSL_KEYSTORE_PASSWORD=$BROKER_KEYSTORE_PASS"
-echo "KAFKA_SSL_KEY_PASSWORD=$BROKER_KEY_PASS"
-echo "KAFKA_SSL_TRUSTSTORE_LOCATION=/etc/security/tls/kafka.server.truststore.jks"
-echo "KAFKA_SSL_TRUSTSTORE_PASSWORD=$BROKER_TRUSTSTORE_PASS"
-echo "KAFKA_SSL_CLIENT_AUTH=required"
+echo " KAFKA_SSL_CLIENT_AUTH: 'required'"
+echo " KAFKA_SSL_KEYSTORE_FILENAME: '${BROKER_HOSTNAME}.keystore.jks'"
+echo " KAFKA_SSL_KEYSTORE_CREDENTIALS: 'kafka_server_keystore_credentials'"
+echo " KAFKA_SSL_KEY_CREDENTIALS: 'kafka_server_sslkey_credentials'"
+echo " KAFKA_SSL_TRUSTSTORE_FILENAME: '${BROKER_HOSTNAME}.truststore.jks'"
+echo " KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'kafka_server_truststore_credentials'"
 echo
 echo "E para o cliente, configure o keystore e truststore correspondentes com as senhas usadas."
