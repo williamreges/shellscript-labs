@@ -1,12 +1,13 @@
 #  🔐 Script Gerador de Keystore e Truststore SSL para broker Kafka  e clientes Kafka
 
 Para gerar os arquivos .jks (Java KeyStore) necessários para a configuração do Kafka SSL no seu serviço, 
-você precisa criar um armazenamento de chaves e uma truststore para seu Docker Compose. Esses arquivos contêm a chave privada e o certificado do 
+você precisa criar um armazenamento de chaves e uma truststore onde neste artigo vamos utilzar o Docker Compose
+como exemplo para provisionar os containeres do kafka como laboratório. Esses arquivos contêm a chave privada e o certificado do 
 servidor (keystore) e os certificados confiáveis (truststore), respectivamente.
 
 ## 📋 Pré Requisito
 
-Para nosso exemplo utilizamremos o Java 17
+Para nosso exemplo utilizamremos o Java 17 para poder gerar o keystore e truststore
 * Faça o download do Java Temurin versão 17.0.15;
 * Imagem docker **kafka-cp versão 7.9.2** onde a imagem tem a mesma versão do Java Temurin 17.0.2.
 
@@ -179,12 +180,12 @@ echo " - Truststore: $CLIENT_TRUSTSTORE"
 echo " - Certificado: $CLIENT_CERT"
 echo
 echo "Lembre-se de configurar as variáveis de ambiente no docker-compose para o broker:"
-echo "KAFKA_SSL_KEYSTORE_LOCATION=/etc/security/tls/kafka.server.keystore.jks"
-echo "KAFKA_SSL_KEYSTORE_PASSWORD=$BROKER_KEYSTORE_PASS"
-echo "KAFKA_SSL_KEY_PASSWORD=$BROKER_KEY_PASS"
-echo "KAFKA_SSL_TRUSTSTORE_LOCATION=/etc/security/tls/kafka.server.truststore.jks"
-echo "KAFKA_SSL_TRUSTSTORE_PASSWORD=$BROKER_TRUSTSTORE_PASS"
-echo "KAFKA_SSL_CLIENT_AUTH=required"
+echo " KAFKA_SSL_CLIENT_AUTH: 'required'"
+echo " KAFKA_SSL_KEYSTORE_FILENAME: '${BROKER_HOSTNAME}.keystore.jks'"
+echo " KAFKA_SSL_KEYSTORE_CREDENTIALS: 'kafka_server_keystore_credentials'"
+echo " KAFKA_SSL_KEY_CREDENTIALS: 'kafka_server_sslkey_credentials'"
+echo " KAFKA_SSL_TRUSTSTORE_FILENAME: '${BROKER_HOSTNAME}.truststore.jks'"
+echo " KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'kafka_server_truststore_credentials'"
 echo
 echo "E para o cliente, configure o keystore e truststore correspondentes com as senhas usadas."
 ```
@@ -251,16 +252,16 @@ services:
 #  🔐 2. Configuração de Clientes KAFKA
 
 ---
-##  Pré-requisitos
+## 📋 Pré-requisitos
 - Você já possui os arquivos `.jks` do cliente:
 - **Keystore do cliente** (contém a chave privada e certificado do cliente): `client.keystore.jks`
 - **Truststore do cliente** (contém o certificado do broker para confiar nele): `client.truststore.jks`
 - O broker Kafka está configurado para SSL e autenticação mútua, conforme seu `docker-compose.yml`.
 ---
-##  Configuração do cliente Kafka Java
+##  Configuração declarativa do cliente Kafka Java
 No cliente Java, você deve configurar as propriedades SSL para que o cliente use os arquivos `.jks` para
 autenticação e para confiar no broker.
-Exemplo de configuração em código Java (usando `Properties`):
+Exemplo de configuração em código Java de forma declarativa (usando `Properties`):
 
 ```java
 Properties props = new Properties();
@@ -327,7 +328,10 @@ ssl.truststore.password=clientTruststorePass
 ---
 
 ## Referencias
-* [Security Compliance in Confluent Platform](https://docs.confluent.io/platform/current/security/compliance/overview.html)
-* [Use TLS Authentication in Confluent Platform](https://docs.confluent.io/platform/current/security/authentication/mutual-tls/overview.html)
-* [Secure Deployment for Kafka Streams in Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/security.html)
-* [Configure Confluent Platform Components to Communicate with MDS over TLS](https://docs.confluent.io/platform/current/kafka/configure-mds/mds-ssl-config-for-components.html)
+* [Use TLS Authentication in Confluent Platform](https://docs.confluent.io/platform/7.9/security/authentication/mutual-tls/overview.html)
+* [Security Compliance in Confluent Platform](https://docs.confluent.io/platform/7.9/security/compliance/overview.html)
+* [Secure Deployment for Kafka Streams in Confluent Platform](https://docs.confluent.io/platform/7.9/streams/developer-guide/security.html)
+* [Deploy Secure Confluent Platform Docker Images](https://docs.confluent.io/platform/7.9/installation/docker/security.html)
+* [Github: confluent/kafka-images: 7.9.2](https://github.com/confluentinc/kafka-images/tree/7.9.2)
+* [Github: confluent/cp-demo: 7.9.2-post](https://github.com/confluentinc/cp-demo/tree/7.9.2-post)
+* [Supported Versions and Interoperability for Confluent Platform](https://docs.confluent.io/platform/current/installation/versions-interoperability.html)
