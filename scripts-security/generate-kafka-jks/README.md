@@ -28,7 +28,7 @@ Para nosso exemplo utilizamremos o Java 17 para poder gerar o keystore e trustst
 - Assim, a autenticação mútua SSL pode funcionar corretamente.
 
 ## 🔐 Como usar
-1. Salve o script como `generate-kafka-jks.sh`.
+1. Salve o script como [`generate-kafka-jks.sh`](generate-kafka-jks.sh).
 2. Dê permissão de execução: `chmod +x generate-kafka-jks.sh`
 3. Execute o script:
    `./generate-kafka-jks.sh`
