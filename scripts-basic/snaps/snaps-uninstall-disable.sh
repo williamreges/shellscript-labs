@@ -1,8 +1,15 @@
 #! /bin/sh
 
-# Remove inactive snap applications
-
-# List all snaps and filter for those not in use
+# Uninstall disabled and inactive snap packages from Ubuntu
+# Removes all disabled snap applications that have no running processes
+# Snap - Linux Package Manager
+# https://snapcraft.io/
+# 
+# Snap é um sistema de empacotamento e gerenciamento de aplicações para Linux.
+# Permite instalar, atualizar e remover software de forma segura e isolada.
+# 
+# Documentação oficial: https://snapcraft.io/docs
+# Repositório de snaps: https://snapcraft.io/store
 snaps=$(snap list --all | grep disabled | awk '{print $1 ":" $3}')
 
 echo snaps to check for inactivity:
