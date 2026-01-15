@@ -1,4 +1,4 @@
-#  🔐 Script Gerador de Keystore e Truststore SSL para broker Kafka  e clientes Kafka
+#  🔐 Script Gerador de Keystore e Truststore SSL para broker Kafka  e clientes Kafka utilizando Keytool Java
 
 Para gerar os arquivos .jks (Java KeyStore) necessários para a configuração do Kafka SSL no seu serviço, 
 você precisa criar um armazenamento de chaves e uma truststore onde neste artigo vamos utilzar o Docker Compose
