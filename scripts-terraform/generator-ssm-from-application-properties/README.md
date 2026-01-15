@@ -2,6 +2,16 @@
 
 Este conjunto de scripts automatiza a geração de arquivos Terraform para gerenciar parâmetros de aplicação usando AWS Systems Manager Parameter Store.
 
+## 🎯 Objetivo
+
+Este projeto facilita a **migração de propriedades do `application.properties` para o AWS Systems Manager Parameter Store (SSM)**. A aplicação Spring pode então consumir as variáveis diretamente do SSM, eliminando a necessidade de gerenciar múltiplos arquivos de configuração e centralizando o controle de parâmetros na AWS.
+
+**Benefícios:**
+- Centralização de configurações na AWS
+- Facilita gerenciamento de ambientes (dev, hom, prod)
+- Integração nativa com aplicações Spring
+- Controle de acesso via IAM
+- Auditoria de alterações via CloudTrail
 
 
 
