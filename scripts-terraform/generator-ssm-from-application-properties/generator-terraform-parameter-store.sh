@@ -2,7 +2,8 @@
 
 configuracaoInicial() {
   TIPOCONFIGURACAO=$( cat aws-parameter-config.properties |  grep tipo.configuracao | cut -d '=' -f 2)
-  APP=$(cat ../pom.xml | grep "<name>[a-zA-Z0-9]*" | sed "s/<name>//g" | sed "s/<\/name>//g" |  sed -e 's/^[ \t]*//')
+#  APP=$(cat ../pom.xml | grep "<name>[a-zA-Z0-9]*" | sed "s/<name>//g" | sed "s/<\/name>//g" |  sed -e 's/^[ \t]*//')
+  APP=$( cat aws-parameter-config.properties |  grep nome.aplicacao | cut -d '=' -f 2)
 
   ARQUIVO_PROPERTIES_DES="application-dev.properties"
   ARQUIVO_PROPERTIES_HOM="application-hom.properties"
@@ -22,7 +23,7 @@ executeAmbientes() {
     echo "===== AMBIENTE $AMBIENTE ======================"
     ARQUIVO_PROPERTIES=$AMBIENTE
     INVENTORIE=$(echo $AMBIENTE | sed "s/application-//g" | sed "s/.properties//g")
-    PROPERTIES=$(cat ./$ARQUIVO_PROPERTIES | grep [a-zA-Z0-9.-]*=*)
+    PROPERTIES=$(cat ./$ARQUIVO_PROPERTIES | grep [a-zA-Z0-9.-]*=[a-zA-Z0-9#@^~\/._-]*)
     criarArquivoTerraformAwsParameter
   done
 }
