@@ -1,0 +1,12 @@
+aws-cli
+bashtop
+dbeaver-ce
+docker
+drawio
+firefox
+insomnia
+intellij-idea-community
+libreoffice
+pycharm-community
+terraform
+zoom-client
